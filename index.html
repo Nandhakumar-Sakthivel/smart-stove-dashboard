@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Smart Gas Stove Dashboard</title>
+  <title>Smart Gas Stove Safety Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     :root {
-      --bg: #1e1e1e;
+      --bg: #121212;
       --primary: #ffffff;
-      --card-bg: #2d2d2d;
+      --card-bg: #333333;
       --accent: #4f46e5;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --info: #3b82f6;
-      --success: #10b981;
+      --danger: #f44336;
+      --warning: #ff9800;
+      --info: #2196f3;
+      --success: #4caf50;
       --glow: 0 0 15px rgba(255, 255, 255, 0.2);
     }
 
@@ -29,29 +29,30 @@
     body {
       background: var(--bg);
       color: var(--primary);
-      padding: 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
+      padding: 20px;
     }
 
     h1 {
       text-align: center;
-      font-size: 2.5rem;
+      font-size: 3rem;
       margin-bottom: 1.5rem;
       color: var(--accent);
       text-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
     }
 
     .container {
-      max-width: 950px;
       width: 100%;
-      padding: 1.5rem;
+      max-width: 950px;
       background: var(--card-bg);
       border-radius: 16px;
       box-shadow: var(--glow);
+      padding: 1.5rem;
+      text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -70,8 +71,8 @@
       padding: 1rem;
       border-radius: 12px;
       font-weight: 600;
+      font-size: 1.1rem;
       margin-bottom: 1rem;
-      font-size: 1rem;
       text-align: center;
       display: none;
       box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
@@ -99,25 +100,23 @@
     }
 
     .status {
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       margin-bottom: 1rem;
-      text-align: center;
       color: var(--success);
     }
 
     .lock-btn {
-      display: block;
-      margin: 0 auto;
       padding: 1rem 2.5rem;
       background: linear-gradient(to right, #6366f1, #3b82f6);
       color: white;
       border: none;
       border-radius: 50px;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
       box-shadow: 0 4px 15px rgba(79, 70, 229, 0.5);
+      margin-bottom: 2rem;
     }
 
     .lock-btn:hover {
@@ -127,14 +126,13 @@
 
     footer {
       margin-top: 2rem;
-      text-align: center;
       font-size: 0.9rem;
       color: #9ca3af;
     }
 
     @media screen and (max-width: 600px) {
       h1 {
-        font-size: 1.5rem;
+        font-size: 2rem;
       }
       .status {
         font-size: 1rem;
@@ -160,17 +158,15 @@
   <footer>© 2025 Smart Kitchen Safety | Powered by ESP32-CAM + MQTT</footer>
 
   <script>
-    // Request permission for notifications
     if (Notification.permission !== "granted") {
       Notification.requestPermission();
     }
 
-    // Connect to MQTT broker
-    const broker = 'wss://<your_mqtt_broker>.hivemq.cloud:8884/mqtt';
+    const broker = 'wss://<your-hivemq-broker>.hivemq.cloud:8884/mqtt';
     const options = {
       clientId: 'web-' + Math.random().toString(16).substr(2, 8),
-      username: '<your_username>',
-      password: '<your_password>',
+      username: '<your-username>',
+      password: '<your-password>',
       clean: true,
       connectTimeout: 4000,
       keepalive: 60,
@@ -188,7 +184,7 @@
 
     client.on('message', (topic, message) => {
       const msg = message.toString();
-      console.log(Message from ${topic}: ${msg});
+      console.log(`Message from ${topic}: ${msg}`);
 
       if (topic === 'stove/alerts') {
         if (msg === 'child_detected') {
@@ -231,7 +227,6 @@
       videoElement.style.display = show ? 'block' : 'none';
     }
 
-    // Function to send browser notifications
     function sendNotification(message) {
       if (Notification.permission === "granted") {
         new Notification("Smart Gas Stove Alert", {
@@ -242,4 +237,4 @@
     }
   </script>
 </body>
-</html> .
+</html>
