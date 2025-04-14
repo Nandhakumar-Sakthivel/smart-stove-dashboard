@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Gas Stove Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    :root {
+      --bg: #1e1e1e;
+      --primary: #ffffff;
+      --card-bg: #2d2d2d;
+      --accent: #4f46e5;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --success: #10b981;
+      --glow: 0 0 15px rgba(255, 255, 255, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--primary);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 1.5rem;
+      color: var(--accent);
+      text-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
+    }
+
+    .container {
+      max-width: 950px;
+      width: 100%;
+      padding: 1.5rem;
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: var(--glow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .video {
+      width: 100%;
+      max-width: 900px;
+      border-radius: 12px;
+      border: 3px solid var(--accent);
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+
+    .alert {
+      padding: 1rem;
+      border-radius: 12px;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      text-align: center;
+      display: none;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease-in-out;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    #childAlert {
+      background-color: var(--warning);
+      color: #1e1e1e;
+      box-shadow: 0 0 12px var(--warning);
+    }
+
+    #fireAlert {
+      background-color: var(--danger);
+      color: #fff;
+      box-shadow: 0 0 15px var(--danger);
+    }
+
+    #gasAlert {
+      background-color: var(--info);
+      color: #fff;
+      box-shadow: 0 0 15px var(--info);
+    }
+
+    .status {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      color: var(--success);
+    }
+
+    .lock-btn {
+      display: block;
+      margin: 0 auto;
+      padding: 1rem 2.5rem;
+      background: linear-gradient(to right, #6366f1, #3b82f6);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(79, 70, 229, 0.5);
+    }
+
+    .lock-btn:hover {
+      background: linear-gradient(to right, #3b82f6, #6366f1);
+      transform: scale(1.05);
+    }
+
+    footer {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+
+    @media screen and (max-width: 600px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+      .status {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🔥 Smart Gas Stove Safety Dashboard</h1>
+
+  <div class="container">
+    <img class="video" id="videoFeed" src="http://your_esp32_ip_address:81/stream" alt="Live Video Feed" />
+
+    <div id="childAlert" class="alert">👶 Child Detected! Locking Stove...</div>
+    <div id="fireAlert" class="alert">🔥 Fire Detected! Locking Stove...</div>
+    <div id="gasAlert" class="alert">🛑 Gas Leak Detected! Act Immediately!</div>
+
+    <div class="status">Stove Status: <span id="statusText">Unlocked</span></div>
+    <button class="lock-btn" onclick="toggleLock()">🔒 Lock/Unlock Stove</button>
+  </div>
+
+  <footer>© 2025 Smart Kitchen Safety | Powered by ESP32-CAM + MQTT</footer>
+
+  <script>
+    // Request permission for notifications
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+
+    // Connect to MQTT broker
+    const broker = 'wss://<your_mqtt_broker>.hivemq.cloud:8884/mqtt';
+    const options = {
+      clientId: 'web-' + Math.random().toString(16).substr(2, 8),
+      username: '<your_username>',
+      password: '<your_password>',
+      clean: true,
+      connectTimeout: 4000,
+      keepalive: 60,
+    };
+
+    const client = mqtt.connect(broker, options);
+
+    let stoveLocked = false;
+
+    client.on('connect', () => {
+      console.log('Connected to MQTT Broker');
+      client.subscribe('stove/alerts');
+      client.subscribe('stove/control');
+    });
+
+    client.on('message', (topic, message) => {
+      const msg = message.toString();
+      console.log(Message from ${topic}: ${msg});
+
+      if (topic === 'stove/alerts') {
+        if (msg === 'child_detected') {
+          showAlert("👶 Child Detected! Locking Stove...", "childAlert");
+          sendNotification("Child Detected! Locking Stove.");
+          showVideoFeed(true);
+          if (!stoveLocked) toggleLock();
+        } else if (msg === 'fire_detected') {
+          showAlert("🔥 Fire Detected! Locking Stove...", "fireAlert");
+          sendNotification("Fire Detected! Locking Stove.");
+          showVideoFeed(true);
+          if (!stoveLocked) toggleLock();
+        } else if (msg === 'gas_detected') {
+          showAlert("🛑 Gas Leak Detected! Act Immediately!", "gasAlert");
+          sendNotification("Gas Leak Detected! Act Immediately.");
+          showVideoFeed(true);
+        }
+      } else if (topic === 'stove/control') {
+        if (msg === 'LOCKED' && !stoveLocked) toggleLock();
+        else if (msg === 'UNLOCKED' && stoveLocked) toggleLock();
+      }
+    });
+
+    function toggleLock() {
+      stoveLocked = !stoveLocked;
+      document.getElementById('statusText').textContent = stoveLocked ? 'Locked' : 'Unlocked';
+      const command = stoveLocked ? 'LOCK' : 'UNLOCK';
+      client.publish('stove/command', command);
+    }
+
+    function showAlert(message, elementId) {
+      const el = document.getElementById(elementId);
+      el.textContent = message;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 8000);
+    }
+
+    function showVideoFeed(show) {
+      const videoElement = document.getElementById('videoFeed');
+      videoElement.style.display = show ? 'block' : 'none';
+    }
+
+    // Function to send browser notifications
+    function sendNotification(message) {
+      if (Notification.permission === "granted") {
+        new Notification("Smart Gas Stove Alert", {
+          body: message,
+          icon: "http://your_icon_url.png"
+        });
+      }
+    }
+  </script>
+</body>
+</html> .
