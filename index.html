@@ -1,240 +1,293 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Smart Gas Stove Safety Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Smart Stove Safety</title>
   <style>
-    :root {
-      --bg: #121212;
-      --primary: #ffffff;
-      --card-bg: #333333;
-      --accent: #4f46e5;
-      --danger: #f44336;
-      --warning: #ff9800;
-      --info: #2196f3;
-      --success: #4caf50;
-      --glow: 0 0 15px rgba(255, 255, 255, 0.2);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Inter', sans-serif;
-    }
-
     body {
-      background: var(--bg);
-      color: var(--primary);
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f4f4f4;
+    }
+
+    header {
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 20px;
-    }
-
-    h1 {
-      text-align: center;
-      font-size: 3rem;
-      margin-bottom: 1.5rem;
-      color: var(--accent);
-      text-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
-    }
-
-    .container {
-      width: 100%;
-      max-width: 950px;
-      background: var(--card-bg);
-      border-radius: 16px;
-      box-shadow: var(--glow);
-      padding: 1.5rem;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .video {
-      width: 100%;
-      max-width: 900px;
-      border-radius: 12px;
-      border: 3px solid var(--accent);
-      margin-bottom: 1.5rem;
-      display: none;
-    }
-
-    .alert {
-      padding: 1rem;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 1.1rem;
-      margin-bottom: 1rem;
-      text-align: center;
-      display: none;
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
-      transition: all 0.3s ease-in-out;
-      width: 100%;
-      max-width: 500px;
-    }
-
-    #childAlert {
-      background-color: var(--warning);
-      color: #1e1e1e;
-      box-shadow: 0 0 12px var(--warning);
-    }
-
-    #fireAlert {
-      background-color: var(--danger);
-      color: #fff;
-      box-shadow: 0 0 15px var(--danger);
-    }
-
-    #gasAlert {
-      background-color: var(--info);
-      color: #fff;
-      box-shadow: 0 0 15px var(--info);
-    }
-
-    .status {
-      font-size: 1.3rem;
-      margin-bottom: 1rem;
-      color: var(--success);
-    }
-
-    .lock-btn {
-      padding: 1rem 2.5rem;
-      background: linear-gradient(to right, #6366f1, #3b82f6);
+      background-color: #34495e;
       color: white;
-      border: none;
-      border-radius: 50px;
-      font-size: 1.3rem;
-      font-weight: 600;
+      padding: 10px 20px;
+    }
+
+    header h1 {
+      font-size: 1.5em;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Updated fire symbol to shield symbol */
+    header h1::before {
+      content: "🛡️"; /* Shield emoji */
+      font-size: 1.5em;
+      margin-right: 10px;
+    }
+
+    .menu-icon {
+      font-size: 1.5em;
       cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(79, 70, 229, 0.5);
-      margin-bottom: 2rem;
     }
 
-    .lock-btn:hover {
-      background: linear-gradient(to right, #3b82f6, #6366f1);
-      transform: scale(1.05);
+    .sidebar {
+      height: 100vh;
+      width: 250px;
+      background-color: #2c3e50;
+      position: fixed;
+      top: 0;
+      left: -250px;
+      transition: left 0.3s ease;
+      padding-top: 60px;
+      z-index: 999;
     }
 
-    footer {
-      margin-top: 2rem;
-      font-size: 0.9rem;
-      color: #9ca3af;
+    .sidebar.open {
+      left: 0;
     }
 
-    @media screen and (max-width: 600px) {
-      h1 {
-        font-size: 2rem;
-      }
-      .status {
-        font-size: 1rem;
-      }
+    .sidebar a {
+      display: block;
+      padding: 15px 25px;
+      color: white;
+      text-decoration: none;
+      transition: background 0.3s;
+    }
+
+    .sidebar a:hover {
+      background-color: #1abc9c;
+    }
+
+    .main-content {
+      margin-left: 0;
+      padding: 20px;
+      transition: margin-left 0.3s;
+    }
+
+    .sidebar.open ~ .main-content {
+      margin-left: 250px;
+    }
+
+    .form-container, .profile-container, .notification-container {
+      display: none;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 500px;
+      margin: 20px auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .form-container input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      box-sizing: border-box;
+    }
+
+    .form-container button {
+      width: 100%;
+      padding: 10px;
+      background-color: #1abc9c;
+      border: none;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .status-box {
+      background-color: #ecf0f1;
+      padding: 20px;
+      text-align: center;
+      margin-top: 30px;
+      border-radius: 10px;
+    }
+
+    .toggle-button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #e67e22;
+      border: none;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .profile-actions button {
+      margin-top: 10px;
+      padding: 8px 15px;
+      background-color: #2980b9;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+
+    .notification-container video {
+      width: 100%;
+      height: auto;
+      margin-bottom: 10px;
+    }
+
+    .alert-message {
+      padding: 10px;
+      background-color: #e74c3c;
+      color: white;
+      text-align: center;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
 
-  <h1>🔥 Smart Gas Stove Safety Dashboard</h1>
+<header>
+  <h1>Smart Stove Safety</h1>
+  <span class="menu-icon" onclick="toggleSidebar()">☰</span>
+</header>
 
-  <div class="container">
-    <img class="video" id="videoFeed" src="http://your_esp32_ip_address:81/stream" alt="Live Video Feed" />
+<div id="sidebar" class="sidebar">
+  <a href="#" onclick="showLoginForm()">Login</a>
+  <a href="#" onclick="showRegisterForm()">Register</a>
+  <a href="#" onclick="toggleProfile()">Profile</a>
+  <a href="#" onclick="showNotification()">Notification</a>
+</div>
 
-    <div id="childAlert" class="alert">👶 Child Detected! Locking Stove...</div>
-    <div id="fireAlert" class="alert">🔥 Fire Detected! Locking Stove...</div>
-    <div id="gasAlert" class="alert">🛑 Gas Leak Detected! Act Immediately!</div>
-
-    <div class="status">Stove Status: <span id="statusText">Unlocked</span></div>
-    <button class="lock-btn" onclick="toggleLock()">🔒 Lock/Unlock Stove</button>
+<div class="main-content">
+  <div id="loginForm" class="form-container">
+    <h2>Login</h2>
+    <input type="text" id="loginUsername" placeholder="Username">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="login()">Login</button>
   </div>
 
-  <footer>© 2025 Smart Kitchen Safety | Powered by ESP32-CAM + MQTT</footer>
+  <div id="registerForm" class="form-container">
+    <h2>Register</h2>
+    <input type="text" id="registerUsername" placeholder="Username">
+    <input type="password" id="registerPassword" placeholder="Password">
+    <button onclick="register()">Register</button>
+  </div>
 
-  <script>
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
+  <div id="userProfile" class="profile-container">
+    <h2>User Profile</h2>
+    <p><strong>Username:</strong> <span id="profileUsername">Guest</span></p>
+    <div class="profile-actions">
+      <button onclick="editProfile()">Edit Username</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="status-box">
+    <h3>Stove Status: <span id="statusText">Unlocked</span></h3>
+    <button class="toggle-button" id="lockButton" onclick="toggleLock()">Lock</button>
+  </div>
+
+  <div id="notificationBox" class="notification-container">
+    <h2>Alert Notification</h2>
+    <div class="alert-message" id="alertMessage">No current alerts.</div>
+    <video id="liveStream" controls autoplay muted>
+      <source src="your_stream_link_here" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+  </div>
+</div>
+
+<script>
+  let sidebarOpen = false;
+  let loggedIn = false;
+  let isLocked = false;
+
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebarOpen = !sidebarOpen;
+    sidebar.classList.toggle('open', sidebarOpen);
+  }
+
+  function showLoginForm() {
+    hideAll();
+    document.getElementById('loginForm').style.display = 'block';
+  }
+
+  function showRegisterForm() {
+    hideAll();
+    document.getElementById('registerForm').style.display = 'block';
+  }
+
+  function showUserProfile() {
+    hideAll();
+    document.getElementById('userProfile').style.display = 'block';
+  }
+
+  function toggleProfile() {
+    const profile = document.getElementById('userProfile');
+    const isVisible = profile.style.display === 'block';
+    hideAll();
+    if (!isVisible) profile.style.display = 'block';
+  }
+
+  function showNotification() {
+    hideAll();
+    document.getElementById('notificationBox').style.display = 'block';
+  }
+
+  function hideAll() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('userProfile').style.display = 'none';
+    document.getElementById('notificationBox').style.display = 'none';
+  }
+
+  function login() {
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    if (username && password) {
+      alert('Login successful');
+      document.getElementById('profileUsername').textContent = username;
+      showUserProfile();
+      loggedIn = true;
+    } else {
+      alert('Please enter both username and password');
     }
+  }
 
-    const broker = 'wss://<your-hivemq-broker>.hivemq.cloud:8884/mqtt';
-    const options = {
-      clientId: 'web-' + Math.random().toString(16).substr(2, 8),
-      username: '<your-username>',
-      password: '<your-password>',
-      clean: true,
-      connectTimeout: 4000,
-      keepalive: 60,
-    };
-
-    const client = mqtt.connect(broker, options);
-
-    let stoveLocked = false;
-
-    client.on('connect', () => {
-      console.log('Connected to MQTT Broker');
-      client.subscribe('stove/alerts');
-      client.subscribe('stove/control');
-    });
-
-    client.on('message', (topic, message) => {
-      const msg = message.toString();
-      console.log(`Message from ${topic}: ${msg}`);
-
-      if (topic === 'stove/alerts') {
-        if (msg === 'child_detected') {
-          showAlert("👶 Child Detected! Locking Stove...", "childAlert");
-          sendNotification("Child Detected! Locking Stove.");
-          showVideoFeed(true);
-          if (!stoveLocked) toggleLock();
-        } else if (msg === 'fire_detected') {
-          showAlert("🔥 Fire Detected! Locking Stove...", "fireAlert");
-          sendNotification("Fire Detected! Locking Stove.");
-          showVideoFeed(true);
-          if (!stoveLocked) toggleLock();
-        } else if (msg === 'gas_detected') {
-          showAlert("🛑 Gas Leak Detected! Act Immediately!", "gasAlert");
-          sendNotification("Gas Leak Detected! Act Immediately.");
-          showVideoFeed(true);
-        }
-      } else if (topic === 'stove/control') {
-        if (msg === 'LOCKED' && !stoveLocked) toggleLock();
-        else if (msg === 'UNLOCKED' && stoveLocked) toggleLock();
-      }
-    });
-
-    function toggleLock() {
-      stoveLocked = !stoveLocked;
-      document.getElementById('statusText').textContent = stoveLocked ? 'Locked' : 'Unlocked';
-      const command = stoveLocked ? 'LOCK' : 'UNLOCK';
-      client.publish('stove/command', command);
+  function register() {
+    const username = document.getElementById('registerUsername').value;
+    const password = document.getElementById('registerPassword').value;
+    if (username && password) {
+      alert('Registration successful');
+      showLoginForm();
+    } else {
+      alert('Please enter both username and password');
     }
+  }
 
-    function showAlert(message, elementId) {
-      const el = document.getElementById(elementId);
-      el.textContent = message;
-      el.style.display = 'block';
-      setTimeout(() => el.style.display = 'none', 8000);
+  function editProfile() {
+    const username = prompt("Enter new username:", document.getElementById('profileUsername').textContent);
+    if (username) {
+      document.getElementById('profileUsername').textContent = username;
     }
+  }
 
-    function showVideoFeed(show) {
-      const videoElement = document.getElementById('videoFeed');
-      videoElement.style.display = show ? 'block' : 'none';
-    }
+  function logout() {
+    alert("You have been logged out");
+    loggedIn = false;
+    document.getElementById('profileUsername').textContent = "Guest";
+    showLoginForm();
+  }
 
-    function sendNotification(message) {
-      if (Notification.permission === "granted") {
-        new Notification("Smart Gas Stove Alert", {
-          body: message,
-          icon: "http://your_icon_url.png"
-        });
-      }
-    }
-  </script>
+  function toggleLock() {
+    isLocked = !isLocked;
+    document.getElementById('statusText').textContent = isLocked ? "Locked" : "Unlocked";
+    document.getElementById('lockButton').textContent = isLocked ? "Unlock" : "Lock";
+  }
+</script>
+
 </body>
 </html>
